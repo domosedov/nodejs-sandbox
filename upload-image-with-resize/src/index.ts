@@ -3,14 +3,19 @@ import path from 'path'
 import multer from 'multer'
 import cors from 'cors'
 import sharp from 'sharp'
-import fs from 'fs'
-import bodyParser from 'body-parser'
+import fs from 'fs/promises'
+// import { PrismaClient } from '@prisma/client'
+import { v4 as uuid } from 'uuid'
 
 const PORT = process.env.PORT || 8000
 const app = express()
+// const prisma = new PrismaClient()
+
+app.use(express.static(path.join(__dirname, 'public')))
+app.use(cors())
 
 const storage = multer.diskStorage({
-  destination: path.resolve(__dirname, 'uploads'),
+  destination: path.resolve(__dirname, 'public', 'uploads'),
   filename: function (req, file, callback) {
     callback(null, file.originalname)
   }
@@ -20,21 +25,32 @@ const upload = multer({
   storage
 })
 
-app.use(express.static(path.join(__dirname, 'public')))
-app.use(cors())
-// app.use(bodyParser.urlencoded({ extended: true }))
-// app.use(bodyParser.json())
-
 app.post('/image', upload.single('avatar'), async (req, res) => {
-  const { filename: image } = req.file
+  const { login } = req.body
+  const thumbnail = sharp(req.file.path)
+  const medium = thumbnail.clone()
+  const id = uuid()
+  const outputDir = path.resolve(__dirname, 'public', 'images', 'avatars')
 
-  console.log(req.body)
+  try {
+    await fs.access(outputDir)
+  } catch (e) {
+    await fs.mkdir(outputDir, {
+      recursive: true
+    })
+  }
 
-  await sharp(req.file.path)
+  await thumbnail
     .resize({ width: 300, height: 300 })
-    .jpeg({ quality: 50 })
-    .toFile(path.resolve(req.file.destination, 'resized', image))
-  fs.unlinkSync(req.file.path)
+    .jpeg({ quality: 75 })
+    .toFile(path.resolve(req.file.destination, outputDir, `${login}-${id}-300.jpeg`))
+
+  await medium
+    .resize({ width: 600, height: 600 })
+    .jpeg({ quality: 80 })
+    .toFile(path.resolve(req.file.destination, outputDir, `${login}-${id}-600.jpeg`))
+
+  await fs.unlink(req.file.path)
 
   return res.json({ message: 'SUCCESS!' })
 })
