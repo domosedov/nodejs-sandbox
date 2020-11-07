@@ -27,9 +27,8 @@ const upload = multer({
 
 app.post('/image', upload.single('avatar'), async (req, res) => {
   const { login } = req.body
-  const thumbnail = sharp(req.file.path)
-  const medium = thumbnail.clone()
-  const large = thumbnail.clone()
+  const sharpStream = sharp(req.file.path)
+
   const id = uuid()
   const outputDir = path.resolve(__dirname, 'public', 'images', 'photos')
 
@@ -41,42 +40,50 @@ app.post('/image', upload.single('avatar'), async (req, res) => {
     })
   }
 
-  const fileName = `${login}-${id}`
+  const promises = []
 
-  console.log(req.file)
-
-  await thumbnail
-    .resize({ width: 150, height: 150 })
-    .jpeg({ quality: 80 })
-    .toFile(
-      path.resolve(
-        req.file.destination,
-        outputDir,
-        `${login}-${id}-150x150.jpeg`
+  promises.push(
+    sharpStream
+      .clone()
+      .jpeg({ quality: 80 })
+      .toFile(
+        path.resolve(
+          req.file.destination,
+          outputDir,
+          `${login}-${id}-150x150.jpeg`
+        )
       )
-    )
+  )
 
-  await medium
-    .resize({ width: 300, height: 300 })
-    .jpeg({ quality: 90 })
-    .toFile(
-      path.resolve(
-        req.file.destination,
-        outputDir,
-        `${login}-${id}-300x300.jpeg`
+  promises.push(
+    sharpStream
+      .clone()
+      .resize({ width: 300, height: 300 })
+      .jpeg({ quality: 90 })
+      .toFile(
+        path.resolve(
+          req.file.destination,
+          outputDir,
+          `${login}-${id}-300x300.jpeg`
+        )
       )
-    )
+  )
 
-  await large
-    .resize({ width: 1024, height: 1024 })
-    .jpeg({ quality: 80 })
-    .toFile(
-      path.resolve(
-        req.file.destination,
-        outputDir,
-        `${login}-${id}-1024x1024.jpeg`
+  promises.push(
+    sharpStream
+      .clone()
+      .resize({ width: 1024, height: 1024 })
+      .jpeg({ quality: 80 })
+      .toFile(
+        path.resolve(
+          req.file.destination,
+          outputDir,
+          `${login}-${id}-1024x1024.jpeg`
+        )
       )
-    )
+  )
+
+  await Promise.all(promises)
 
   await fs.unlink(req.file.path)
 
