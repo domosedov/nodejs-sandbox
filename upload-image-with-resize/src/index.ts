@@ -29,8 +29,9 @@ app.post('/image', upload.single('avatar'), async (req, res) => {
   const { login } = req.body
   const thumbnail = sharp(req.file.path)
   const medium = thumbnail.clone()
+  const large = thumbnail.clone()
   const id = uuid()
-  const outputDir = path.resolve(__dirname, 'public', 'images', 'avatars')
+  const outputDir = path.resolve(__dirname, 'public', 'images', 'photos')
 
   try {
     await fs.access(outputDir)
@@ -40,15 +41,42 @@ app.post('/image', upload.single('avatar'), async (req, res) => {
     })
   }
 
+  const fileName = `${login}-${id}`
+
+  console.log(req.file)
+
   await thumbnail
-    .resize({ width: 300, height: 300 })
-    .jpeg({ quality: 75 })
-    .toFile(path.resolve(req.file.destination, outputDir, `${login}-${id}-300.jpeg`))
+    .resize({ width: 150, height: 150 })
+    .jpeg({ quality: 80 })
+    .toFile(
+      path.resolve(
+        req.file.destination,
+        outputDir,
+        `${login}-${id}-150x150.jpeg`
+      )
+    )
 
   await medium
-    .resize({ width: 600, height: 600 })
+    .resize({ width: 300, height: 300 })
+    .jpeg({ quality: 90 })
+    .toFile(
+      path.resolve(
+        req.file.destination,
+        outputDir,
+        `${login}-${id}-300x300.jpeg`
+      )
+    )
+
+  await large
+    .resize({ width: 1024, height: 1024 })
     .jpeg({ quality: 80 })
-    .toFile(path.resolve(req.file.destination, outputDir, `${login}-${id}-600.jpeg`))
+    .toFile(
+      path.resolve(
+        req.file.destination,
+        outputDir,
+        `${login}-${id}-1024x1024.jpeg`
+      )
+    )
 
   await fs.unlink(req.file.path)
 
